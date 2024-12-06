@@ -68,7 +68,6 @@ class ResKAN(pl.LightningModule):
         self,
         learning_rate: float,
         weight_decay: float,
-        batchsize: int,
         img_size: int,
         patch_size: int,
         channels: int,

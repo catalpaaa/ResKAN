@@ -73,12 +73,14 @@ class dataset(pl.LightningDataModule):
 
 
 config = asdict(ResKAN_config())
+data = dataset(batch_size=config["batchsize"], num_workers=8)
+config.pop("batchsize")
 model = ResKAN(**config)
 
 # config = asdict(ResMLP_config())
+# data = dataset(batch_size=config["batchsize"], num_workers=8)
+# config.pop("batchsize")
 # model = ResMLP(**config)
-
-data = dataset(batch_size=config["batchsize"], num_workers=8)
 
 trainer = pl.Trainer(
     callbacks=[
