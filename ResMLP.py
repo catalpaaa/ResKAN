@@ -11,7 +11,7 @@ class Affine(nn.Module):
     def __init__(self, d_model):
         super().__init__()
 
-        self.A = nn.Parameter(torch.ones([1, 1, d_model]))
+        self.A = nn.Parameter(torch.ones([d_model]))
         self.b = nn.Parameter(torch.zeros([1, 1, d_model]))
 
     def forward(self, x):
@@ -40,27 +40,27 @@ class FeedForward(nn.Module):
 class ResMLPblock(nn.Module):
     def __init__(
         self,
-        dim,
+        d_in,
+        d_out,
         num_patch,
-        mlp_dim,
         dropout=0.0,
         init_values=1e-4,
     ):
         super().__init__()
 
-        self.pre_affine = Affine(dim)
+        self.pre_affine = Affine(d_in)
         self.token_mix = nn.Sequential(
             Rearrange("b n d -> b d n"),
             nn.Linear(num_patch, num_patch),
             Rearrange("b d n -> b n d"),
         )
-        self.gamma_1 = nn.Parameter(init_values * torch.ones((dim)))
+        self.gamma_1 = nn.Parameter(init_values * torch.ones((d_in)))
 
-        self.post_affine = Affine(dim)
+        self.post_affine = Affine(d_in)
         self.ff = nn.Sequential(
-            FeedForward(dim, mlp_dim, dropout),
+            FeedForward(d_in, d_out, dropout),
         )
-        self.gamma_2 = nn.Parameter(init_values * torch.ones((dim)))
+        self.gamma_2 = nn.Parameter(init_values * torch.ones((d_in)))
 
     def forward(self, x):
         x = x + torch.einsum(
@@ -108,7 +108,7 @@ class ResMLP(pl.LightningModule):
         self.blocks = nn.ModuleList([])
         for _ in range(depth):
             self.blocks.append(
-                ResMLPblock(d_model, self.num_patch, d_hidden, init_values)
+                ResMLPblock(d_model, d_hidden, self.num_patch, init_values)
             )
 
         self.affine = Affine(d_model)
