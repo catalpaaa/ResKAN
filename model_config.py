@@ -12,7 +12,7 @@ class ResMLP_config:
     depth: int = 12
     d_model: int = 384
     d_hidden: int = 1536
-    num_classes: int = 100
+    num_classes: int = 1000
     dropout: float = 0.1
     init_values: float = 0.1
 
@@ -29,5 +29,5 @@ class ResKAN_config:
     d_model: int = 128
     grid_size: int = 8
     expand: int = 4
-    num_classes: int = 100
+    num_classes: int = 1000
     init_values: float = 0.1
