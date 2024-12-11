@@ -6,7 +6,6 @@ import torchvision.transforms as transforms
 from lightning.pytorch import loggers as pl_loggers
 from pytorch_lightning.callbacks import LearningRateMonitor
 from torch.utils.data import DataLoader
-from torchvision.datasets import CIFAR100
 from torchvision.transforms import AutoAugment, AutoAugmentPolicy
 
 from model_config import ResKAN_config, ResMLP_config
