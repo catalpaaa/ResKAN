@@ -132,8 +132,24 @@ class ResKAN(pl.LightningModule):
 
         return x
 
-    def forward(self, x):
-        x = self.forward_compiled(x)
+    def forward_uncompiled(self, x: torch.Tensor):
+        x = self.patch_embedding(x)
+        x = x + self.pos_embedding
+
+        for block in self.blocks:
+            x = block(x)
+        x = self.affine(x)
+
+        x = x.mean(dim=1)
+        x = self.head(x)
+
+        return x
+
+    def forward(self, x: torch.Tensor, torch_compiled: bool = True):
+        if torch_compiled:
+            x = self.forward_compiled(x)
+        else:
+            x = self.forward_uncompiled(x)
 
         return x
 
