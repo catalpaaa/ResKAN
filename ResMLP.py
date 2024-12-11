@@ -8,7 +8,7 @@ from torchmetrics.classification import Accuracy
 
 
 class Affine(nn.Module):
-    def __init__(self, d_model):
+    def __init__(self, d_model: int):
         super().__init__()
 
         self.A = nn.Parameter(torch.ones([d_model]))
@@ -21,7 +21,7 @@ class Affine(nn.Module):
 
 
 class FeedForward(nn.Module):
-    def __init__(self, d_model, d_hidden, dropout=0.0):
+    def __init__(self, d_model: int, d_hidden: int, dropout: float = 0.0):
         super().__init__()
         self.forward_feature = nn.Sequential(
             nn.Linear(d_model, d_hidden),
@@ -31,38 +31,36 @@ class FeedForward(nn.Module):
             nn.Dropout(dropout),
         )
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.forward_feature(x)
 
         return x
 
 
-class ResMLPblock(nn.Module):
+class ResMLPBlock(nn.Module):
     def __init__(
         self,
-        d_in,
-        d_out,
-        num_patch,
-        dropout=0.0,
-        init_values=1e-4,
+        d_model: int,
+        d_hidden: int,
+        num_patch: int,
+        dropout: float = 0.0,
+        init_values: float = 0.1,
     ):
         super().__init__()
 
-        self.pre_affine = Affine(d_in)
+        self.pre_affine = Affine(d_model)
         self.token_mix = nn.Sequential(
             Rearrange("b n d -> b d n"),
             nn.Linear(num_patch, num_patch),
             Rearrange("b d n -> b n d"),
         )
-        self.gamma_1 = nn.Parameter(init_values * torch.ones((d_in)))
+        self.gamma_1 = nn.Parameter(init_values * torch.ones((d_model)))
 
-        self.post_affine = Affine(d_in)
-        self.ff = nn.Sequential(
-            FeedForward(d_in, d_out, dropout),
-        )
-        self.gamma_2 = nn.Parameter(init_values * torch.ones((d_in)))
+        self.post_affine = Affine(d_model)
+        self.ff = FeedForward(d_model, d_hidden, dropout)
+        self.gamma_2 = nn.Parameter(init_values * torch.ones((d_model)))
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = x + torch.einsum(
             "d, b n d -> b n d",
             self.gamma_1,
@@ -80,16 +78,17 @@ class ResMLPblock(nn.Module):
 class ResMLP(pl.LightningModule):
     def __init__(
         self,
-        learning_rate,
-        weight_decay,
-        img_size,
-        patch_size,
-        channels,
-        depth,
-        d_model,
-        d_hidden,
-        num_classes,
-        init_values,
+        learning_rate: float,
+        weight_decay: float,
+        img_size: int,
+        patch_size: int,
+        channels: int,
+        depth: int,
+        d_model: int,
+        d_hidden: int,
+        num_classes: int,
+        dropout: float,
+        init_values: float,
     ):
         super().__init__()
         self.save_hyperparameters()
@@ -108,12 +107,12 @@ class ResMLP(pl.LightningModule):
         self.blocks = nn.ModuleList([])
         for _ in range(depth):
             self.blocks.append(
-                ResMLPblock(d_model, d_hidden, self.num_patch, init_values)
+                ResMLPBlock(d_model, d_hidden, self.num_patch, dropout, init_values)
             )
 
         self.affine = Affine(d_model)
 
-        self.head = nn.Sequential(nn.Linear(d_model, num_classes))
+        self.head = nn.Linear(d_model, num_classes)
 
         self.ce_loss = nn.CrossEntropyLoss()
 
@@ -125,7 +124,7 @@ class ResMLP(pl.LightningModule):
         )
 
     @torch.compile(mode="max-autotune")
-    def forward_compiled(self, x: torch.Tensor):
+    def forward_compiled(self, x: torch.Tensor) -> torch.Tensor:
         x = self.patch_embedding(x)
 
         for block in self.blocks:
@@ -137,8 +136,23 @@ class ResMLP(pl.LightningModule):
 
         return x
 
-    def forward(self, x):
-        x = self.forward_compiled(x)
+    def forward_uncompile(self, x: torch.Tensor) -> torch.Tensor:
+        x = self.patch_embedding(x)
+
+        for block in self.blocks:
+            x = block(x)
+        x = self.affine(x)
+
+        x = x.mean(dim=1)
+        x = self.head(x)
+
+        return x
+
+    def forward(self, x: torch.Tensor, torch_compiled: bool = True) -> torch.Tensor:
+        if torch_compiled:
+            x = self.forward_compiled(x)
+        else:
+            x = self.forward_uncompile(x)
 
         return x
 

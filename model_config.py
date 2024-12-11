@@ -13,6 +13,7 @@ class ResMLP_config:
     d_model: int = 384
     d_hidden: int = 1536
     num_classes: int = 100
+    dropout: float = 0.1
     init_values: float = 0.1
 
 
