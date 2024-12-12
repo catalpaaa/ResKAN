@@ -1,3 +1,3 @@
 mamba env create -f environment.yml
-mamba activate test
+mamba activate ResKAN
 pip install lion-pytorch

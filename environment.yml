@@ -1,4 +1,4 @@
-name: test
+name: ResKAN
 channels:
   - nvidia
   - pytorch
@@ -12,7 +12,7 @@ dependencies:
   - lightning
   - python=3.12.*
   - pytorch
-  - pytorch-cuda=12.1
+  - pytorch-cuda=12.4
   - torchaudio
   - torchvision
   - wandb
